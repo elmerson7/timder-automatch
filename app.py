@@ -57,22 +57,36 @@ def descripcion_contiene_palabra_excluida(driver):
     return False
 
 def hacer_swipe(driver):
-    expandir_descripcion(driver)  # Primero, expande descripción
-    
+    # 1. Expande descripción de inmediato al cargar perfil
+    expandir_descripcion(driver)
+    time.sleep(1)  # 2. Espera 1 segundo para que cargue bien
+
+    # 3. Analiza y decide, pero NO hace swipe aún
     if descripcion_contiene_palabra_excluida(driver):
-        print("[BOT] Swipe LEFT (palabra excluida en descripción)")
-        # Buscar el botón justo antes de usarlo
+        print("[BOT] Decisión: LEFT (palabra excluida en descripción)")
+        swipe = 'left'
+    else:
+        print("[BOT] Decisión: RIGHT (perfil aceptado)")
+        swipe = 'right'
+    
+    # 4. Espera 12 segundos antes de hacer swipe
+    wait_time = 12
+    print(f"[DEBUG] Esperando {wait_time}s antes de hacer swipe...")
+    time.sleep(wait_time)
+
+    # 5. Hace swipe según la decisión
+    if swipe == 'left':
         left_button, _ = obtener_botones_swipe(driver)
         if left_button:
             left_button.click()
+            print("[BOT] Swipe LEFT ejecutado")
         else:
             print("[ERROR] No se encontró el botón de left swipe")
     else:
-        print("[BOT] Swipe RIGHT (perfil aceptado)")
-        # Buscar el botón justo antes de usarlo
         _, right_button = obtener_botones_swipe(driver)
         if right_button:
             right_button.click()
+            print("[BOT] Swipe RIGHT ejecutado")
         else:
             print("[ERROR] No se encontró el botón de right swipe")
 
@@ -83,14 +97,13 @@ def main():
     time.sleep(10)
 
     while True:
-        wait_time = 12
-        print(f"[DEBUG] Esperando {wait_time}s antes del próximo swipe...")
-        time.sleep(wait_time)
         try:
             hacer_swipe(driver)
         except Exception as e:
             print(f"[ERROR] No se pudo hacer swipe, esperando... {e}")
             time.sleep(3)
+
+
 
 if __name__ == "__main__":
     main()
