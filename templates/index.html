@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tablas desde SQLite</title>
+</head>
+<body>
+    <h1>Swipes</h1>
+    <table border="1">
+        <tr><th>ID</th><th>Timestamp</th><th>Tipo</th><th>Descripción</th></tr>
+        {% for row in swipes %}
+        <tr>
+            <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td>{{ row[3] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h1>Logs</h1>
+    <table border="1">
+        <tr><th>ID</th><th>Inicio</th></tr>
+        {% for row in logs %}
+        <tr>
+            <td>{{ row[0] }}</td><td>{{ row[1] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
