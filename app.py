@@ -1,8 +1,17 @@
 import time
-import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+
+EXCLUSION_KEYWORDS = [
+    "trans", "transgénero", "transgénera", "persona transfemenina", "persona transmasculina",
+    "transfemenina", "transmasculina", "transexual", "transsexual", "travesti", "no binario",
+    "no binaria", "género fluido", "gender fluid", "género queer", "queer", "agénero",
+    "bigénero", "pangénero", "dos espíritus", "two-spirit", "andrógino", "andrógina",
+    "persona trans", "persona no binaria", "persona de género no conforme", "otro"
+]
+
 
 def iniciar_driver():
     chrome_options = Options()
@@ -12,34 +21,60 @@ def iniciar_driver():
     return webdriver.Chrome(options=chrome_options)
 
 def obtener_botones_swipe(driver):
-    print("[DEBUG] Buscando botones de swipe...")
     buttons = driver.find_elements(By.CSS_SELECTOR, 'button.gamepad-button')
-    print(f"[DEBUG] Se encontraron {len(buttons)} botones con clase 'gamepad-button'")
     left_button, right_button = None, None
-    for idx, btn in enumerate(buttons):
-        print(f"[DEBUG] Analizando botón #{idx}")
+    for btn in buttons:
         spans = btn.find_elements(By.CSS_SELECTOR, '.Hidden')
-        print(f"[DEBUG]    -> Encontrados {len(spans)} spans '.Hidden'")
         for span in spans:
             label = span.text.strip().lower()
-            print(f"[DEBUG]        -> Span con texto: '{label}'")
             if label == "no":
                 left_button = btn
             elif label == "like":
                 right_button = btn
-    print(f"[DEBUG] Botón left: {bool(left_button)}, right: {bool(right_button)}")
     return left_button, right_button
 
+def expandir_descripcion(driver):
+    try:
+        # Enviamos la flecha arriba al body
+        body = driver.find_element(By.TAG_NAME, 'body')
+        body.send_keys(Keys.ARROW_UP)
+        print("[DEBUG] Tecla flecha ARRIBA enviada para expandir descripción.")
+        time.sleep(1)  # Espera que se despliegue la descripción
+    except Exception as e:
+        print(f"[WARN] No se pudo enviar la flecha arriba: {e}")
+
+def descripcion_contiene_palabra_excluida(driver):
+    try:
+        descripciones = driver.find_elements(By.CSS_SELECTOR, '.C\\(\\$c-ds-text-primary\\).Typs\\(body-1-regular\\)')
+        for desc in descripciones:
+            texto = desc.text.lower()
+            print(f"[DEBUG] Descripción encontrada: {texto}")
+            if any(word in texto for word in EXCLUSION_KEYWORDS):
+                print("[DEBUG] Palabra excluida encontrada en la descripción.")
+                return True
+    except Exception as e:
+        print(f"[WARN] No se pudo leer la descripción: {e}")
+    return False
+
 def hacer_swipe(driver):
-    left_button, right_button = obtener_botones_swipe(driver)
-    if right_button and random.random() < 0.7:
-        print("[DEBUG] Haciendo swipe RIGHT")
-        right_button.click()
-    elif left_button:
-        print("[DEBUG] Haciendo swipe LEFT")
-        left_button.click()
+    expandir_descripcion(driver)  # Primero, expande descripción
+    
+    if descripcion_contiene_palabra_excluida(driver):
+        print("[BOT] Swipe LEFT (palabra excluida en descripción)")
+        # Buscar el botón justo antes de usarlo
+        left_button, _ = obtener_botones_swipe(driver)
+        if left_button:
+            left_button.click()
+        else:
+            print("[ERROR] No se encontró el botón de left swipe")
     else:
-        print("[ERROR] No se encontraron botones de swipe")
+        print("[BOT] Swipe RIGHT (perfil aceptado)")
+        # Buscar el botón justo antes de usarlo
+        _, right_button = obtener_botones_swipe(driver)
+        if right_button:
+            right_button.click()
+        else:
+            print("[ERROR] No se encontró el botón de right swipe")
 
 def main():
     driver = iniciar_driver()
@@ -48,7 +83,7 @@ def main():
     time.sleep(10)
 
     while True:
-        wait_time = random.randint(5, 10)
+        wait_time = 12
         print(f"[DEBUG] Esperando {wait_time}s antes del próximo swipe...")
         time.sleep(wait_time)
         try:
