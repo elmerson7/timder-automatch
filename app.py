@@ -1,4 +1,5 @@
 import time
+import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -82,8 +83,8 @@ def hacer_swipe(driver):
         print("[BOT] Decisión: RIGHT (perfil aceptado)")
         swipe = 'right'
     
-    # 4. Espera 12 segundos antes de hacer swipe
-    wait_time = 12
+    # 4. Espera un tiempo aleatorio entre 7 y 10 segundos
+    wait_time = random.randint(7, 10)
     print(f"[DEBUG] Esperando {wait_time}s antes de hacer swipe...")
     time.sleep(wait_time)
 
