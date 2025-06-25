@@ -1,5 +1,7 @@
 import time
 import random
+import sqlite3
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -12,6 +14,39 @@ EXCLUSION_KEYWORDS = [
     "bigénero", "pangénero", "dos espíritus", "two-spirit", "andrógino", "andrógina",
     "persona trans", "persona no binaria", "persona de género no conforme", "otro"
 ]
+
+# --- Conexion y creación de BD y tablas ---
+conn = sqlite3.connect('timder.db')
+c = conn.cursor()
+
+# Crear tabla swipes si no existe
+c.execute('''
+    CREATE TABLE IF NOT EXISTS swipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME,
+        tipo_swipe TEXT,
+        descripcion TEXT
+    )
+''')
+
+# Crear tabla logs si no existe
+c.execute('''
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inicio DATETIME
+    )
+''')
+
+# Guardar inicio de sesión
+c.execute("INSERT INTO logs (inicio) VALUES (?)", (datetime.now(),))
+conn.commit()
+
+
+def guardar_swipe(tipo, descripcion=None):
+    timestamp = datetime.now()
+    c.execute("INSERT INTO swipes (timestamp, tipo_swipe, descripcion) VALUES (?, ?, ?)",
+            (timestamp, tipo, descripcion))
+    conn.commit()
 
 
 def iniciar_driver():
@@ -44,6 +79,17 @@ def expandir_descripcion(driver):
     except Exception as e:
         print(f"[WARN] No se pudo enviar la flecha arriba: {e}")
 
+def obtener_descripcion(driver):
+    descripcion_final = []
+    try:
+        descripciones = driver.find_elements(By.CSS_SELECTOR, '.C\\(\\$c-ds-text-primary\\).Typs\\(body-1-regular\\)')
+        for desc in descripciones:
+            texto = desc.text.strip()
+            descripcion_final.append(texto)
+    except Exception as e:
+        print(f"[WARN] No se pudo leer la descripción: {e}")
+    return " | ".join(descripcion_final)
+
 def descripcion_contiene_palabra_excluida(driver):
     try:
         descripciones = driver.find_elements(By.CSS_SELECTOR, '.C\\(\\$c-ds-text-primary\\).Typs\\(body-1-regular\\)')
@@ -59,42 +105,42 @@ def descripcion_contiene_palabra_excluida(driver):
 
 def cerrar_superlike_popup(driver):
     try:
-        # Busca el botón por el texto visible dentro del div 'No, gracias'
         botones = driver.find_elements(By.XPATH, '//button[contains(.,"No, gracias")]')
         if botones:
             botones[0].click()
             print("[BOT] Popup de Super Like cerrado con 'No, gracias'")
-            time.sleep(1)  # Espera para que cierre bien
+            time.sleep(1)
         else:
             print("[DEBUG] No hay popup de Super Like que cerrar")
     except Exception as e:
         print(f"[WARN] No se pudo cerrar el popup de Super Like: {e}")
 
 def hacer_swipe(driver):
-    # 1. Expande descripción de inmediato al cargar perfil
     expandir_descripcion(driver)
-    time.sleep(1)  # 2. Espera 1 segundo para que cargue bien
+    time.sleep(1)  # Espera 1 segundo para que cargue bien
 
-    # 3. Analiza y decide, pero NO hace swipe aún
+    descripcion = obtener_descripcion(driver)
+
+    # Decide
     if descripcion_contiene_palabra_excluida(driver):
         print("[BOT] Decisión: LEFT (palabra excluida en descripción)")
-        swipe = 'left'
+        swipe = 'nope'
     else:
         print("[BOT] Decisión: RIGHT (perfil aceptado)")
-        swipe = 'right'
+        swipe = 'like'
     
-    # 4. Espera un tiempo aleatorio entre 7 y 10 segundos
     wait_time = random.randint(7, 10)
     print(f"[DEBUG] Esperando {wait_time}s antes de hacer swipe...")
     time.sleep(wait_time)
 
-    # 5. Hace swipe según la decisión
-    if swipe == 'left':
+    # Swipe y guardar
+    if swipe == 'nope':
         left_button, _ = obtener_botones_swipe(driver)
         if left_button:
             left_button.click()
             print("[BOT] Swipe LEFT ejecutado")
             cerrar_superlike_popup(driver)
+            guardar_swipe('nope', descripcion)
         else:
             print("[ERROR] No se encontró el botón de left swipe")
     else:
@@ -103,6 +149,7 @@ def hacer_swipe(driver):
             right_button.click()
             print("[BOT] Swipe RIGHT ejecutado")
             cerrar_superlike_popup(driver)
+            guardar_swipe('like', descripcion)
         else:
             print("[ERROR] No se encontró el botón de right swipe")
 
@@ -118,8 +165,6 @@ def main():
         except Exception as e:
             print(f"[ERROR] No se pudo hacer swipe, esperando... {e}")
             time.sleep(3)
-
-
 
 if __name__ == "__main__":
     main()
