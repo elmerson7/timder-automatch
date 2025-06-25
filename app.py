@@ -56,6 +56,19 @@ def descripcion_contiene_palabra_excluida(driver):
         print(f"[WARN] No se pudo leer la descripción: {e}")
     return False
 
+def cerrar_superlike_popup(driver):
+    try:
+        # Busca el botón por el texto visible dentro del div 'No, gracias'
+        botones = driver.find_elements(By.XPATH, '//button[contains(.,"No, gracias")]')
+        if botones:
+            botones[0].click()
+            print("[BOT] Popup de Super Like cerrado con 'No, gracias'")
+            time.sleep(1)  # Espera para que cierre bien
+        else:
+            print("[DEBUG] No hay popup de Super Like que cerrar")
+    except Exception as e:
+        print(f"[WARN] No se pudo cerrar el popup de Super Like: {e}")
+
 def hacer_swipe(driver):
     # 1. Expande descripción de inmediato al cargar perfil
     expandir_descripcion(driver)
@@ -80,6 +93,7 @@ def hacer_swipe(driver):
         if left_button:
             left_button.click()
             print("[BOT] Swipe LEFT ejecutado")
+            cerrar_superlike_popup(driver)
         else:
             print("[ERROR] No se encontró el botón de left swipe")
     else:
@@ -87,6 +101,7 @@ def hacer_swipe(driver):
         if right_button:
             right_button.click()
             print("[BOT] Swipe RIGHT ejecutado")
+            cerrar_superlike_popup(driver)
         else:
             print("[ERROR] No se encontró el botón de right swipe")
 
