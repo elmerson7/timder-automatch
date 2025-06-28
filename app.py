@@ -1,11 +1,15 @@
 import time
 import random
 import sqlite3
+import cv2
+import requests
+import tempfile
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from deepface import DeepFace
 
 EXCLUSION_KEYWORDS = [
     "trans", "transgénero", "transgénera", "persona transfemenina", "persona transmasculina",
@@ -146,8 +150,44 @@ def obtener_urls_imagenes(driver):
 
     return list(urls)
 
+def imagen_es_valida(url_imagen):
+    try:
+        # Descargar imagen
+        response = requests.get(url_imagen, timeout=10)
+        if response.status_code != 200:
+            print("[ERROR] No se pudo descargar la imagen.")
+            return False
+
+        # Guardar temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+            tmp.write(response.content)
+            path_local = tmp.name
+
+        # Detectar rostro
+        analisis = DeepFace.analyze(img_path=path_local, actions=["age"], enforce_detection=False)
+        if not isinstance(analisis, list):
+            analisis = [analisis]
+
+        if len(analisis) != 1:
+            print("[DESCARTADA] Cero o múltiples rostros.")
+            return False
+
+        # Verificar blur
+        img = cv2.imread(path_local, cv2.IMREAD_GRAYSCALE)
+        blur_score = cv2.Laplacian(img, cv2.CV_64F).var()
+        if blur_score < 20:
+            print(f"[DESCARTADA] Imagen borrosa (blur={blur_score:.2f})")
+            return False
+
+        print("[OK] Imagen válida")
+        return True
+
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return False
 
 def hacer_swipe(driver):
+    time.sleep(1)
     cerrar_superlike_popup(driver)
     expandir_descripcion(driver)
     time.sleep(1)
@@ -162,8 +202,17 @@ def hacer_swipe(driver):
         swipe = 'like'
 
     # Obtener imágenes del perfil ANTES de esperar
-    urls = obtener_urls_imagenes(driver)
-    print(f"[DEBUG] URLs obtenidas del perfil: {urls}")
+    urls_crudas = obtener_urls_imagenes(driver)
+    # print(f"[DEBUG] URLs obtenidas del perfil: {urls_crudas}")
+
+    urls_validas = []
+    for url in urls_crudas:
+        print(f"\n[VERIFICANDO] {url}")
+        if imagen_es_valida(url):
+            print(f"[✅ VÁLIDA] Imagen aceptada: {url}")
+            urls_validas.append(url)
+        else:
+            print(f"[❌ DESCARTADA] Imagen rechazada: {url}")
 
     # Espera personalizada
     wait_time = random.randint(6, 10)
