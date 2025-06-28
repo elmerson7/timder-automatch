@@ -12,7 +12,7 @@ EXCLUSION_KEYWORDS = [
     "transfemenina", "transmasculina", "transexual", "transsexual", "travesti", "no binario",
     "no binaria", "género fluido", "gender fluid", "género queer", "queer", "agénero",
     "bigénero", "pangénero", "dos espíritus", "two-spirit", "andrógino", "andrógina",
-    "persona trans", "persona no binaria", "persona de género no conforme", "otro"
+    "persona trans", "persona no binaria", "persona de género no conforme", "🏳️‍🌈"
 ]
 
 # --- Conexion y creación de BD y tablas ---
@@ -115,31 +115,73 @@ def cerrar_superlike_popup(driver):
     except Exception as e:
         print(f"[WARN] No se pudo cerrar el popup de Super Like: {e}")
 
+def obtener_urls_imagenes(driver):
+    urls = set()
+    ya_vistos = set()
+
+    while True:
+        try:
+            slides = driver.find_elements(By.CSS_SELECTOR, 'div[id^="carousel-item-"][aria-hidden="false"]')
+            for slide in slides:
+                style_divs = slide.find_elements(By.CSS_SELECTOR, 'div[style*="background-image"]')
+                for div in style_divs:
+                    style = div.get_attribute('style')
+                    if 'background-image' in style:
+                        inicio = style.find('url("') + 5
+                        fin = style.find('")', inicio)
+                        url = style[inicio:fin]
+                        urls.add(url)
+
+            current_ids = {slide.get_attribute("id") for slide in slides}
+            if current_ids.issubset(ya_vistos):
+                break
+            ya_vistos.update(current_ids)
+
+            boton_siguiente = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Siguiente foto"]')
+            boton_siguiente.click()
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"[WARN] Error al obtener imágenes: {e}")
+            break
+
+    return list(urls)
+
+
 def hacer_swipe(driver):
+    cerrar_superlike_popup(driver)
     expandir_descripcion(driver)
-    time.sleep(1)  # Espera 1 segundo para que cargue bien
+    time.sleep(1)
 
     descripcion = obtener_descripcion(driver)
 
-    # Decide
     if descripcion_contiene_palabra_excluida(driver):
         print("[BOT] Decisión: LEFT (palabra excluida en descripción)")
         swipe = 'nope'
     else:
         print("[BOT] Decisión: RIGHT (perfil aceptado)")
         swipe = 'like'
-    
-    wait_time = random.randint(7, 10)
+
+    # Obtener imágenes del perfil ANTES de esperar
+    urls = obtener_urls_imagenes(driver)
+    print(f"[DEBUG] URLs obtenidas del perfil: {urls}")
+
+    # Espera personalizada
+    wait_time = random.randint(6, 10)
     print(f"[DEBUG] Esperando {wait_time}s antes de hacer swipe...")
     time.sleep(wait_time)
 
-    # Swipe y guardar
+    # Ejecutar swipe y guardar
+    if swipe == 'nope':
+        time.sleep(6)
+    else:
+        time.sleep(7)
+
+    # Ejecutar swipe y guardar
     if swipe == 'nope':
         left_button, _ = obtener_botones_swipe(driver)
         if left_button:
             left_button.click()
             print("[BOT] Swipe LEFT ejecutado")
-            cerrar_superlike_popup(driver)
             guardar_swipe('nope', descripcion)
         else:
             print("[ERROR] No se encontró el botón de left swipe")
@@ -148,7 +190,6 @@ def hacer_swipe(driver):
         if right_button:
             right_button.click()
             print("[BOT] Swipe RIGHT ejecutado")
-            cerrar_superlike_popup(driver)
             guardar_swipe('like', descripcion)
         else:
             print("[ERROR] No se encontró el botón de right swipe")
