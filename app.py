@@ -262,7 +262,7 @@ def hacer_swipe(driver):
     promedio = score_total / score_count if score_count > 0 else 0
     print(f"[DEBUG] Promedio de score: {promedio}")
 
-    decision = 'like' if promedio >= 7 else 'nope'
+    decision = 'like' if promedio >= 5.5 else 'nope'
     print(f"[BOT] Decisión final por score: {decision.upper()}")
 
     wait_time = random.randint(6, 10)
