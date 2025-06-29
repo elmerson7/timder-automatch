@@ -19,11 +19,13 @@ def redimensionar_imagen(path_original, ancho_maximo=512):
     nuevo_alto = int(alto_actual * proporcion)
 
     # Redimensionar con alta calidad
-    img = img.resize((ancho_maximo, nuevo_alto), Image.LANCZOS)
+    img = img.resize((ancho_maximo, nuevo_alto), Image.Resampling.LANCZOS)
 
     nombre_base, extension = os.path.splitext(path_original)
     temp_path = f"{nombre_base}_resized{extension}"
     img_format = img.format or extension[1:].upper() or 'WEBP'
+    if img_format == "JPG":
+        img_format = "JPEG"
     img.save(temp_path, format=img_format)
 
     return temp_path
