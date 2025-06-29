@@ -3,8 +3,31 @@ import base64
 import os
 import json
 from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
+
+def redimensionar_imagen(path_original, ancho_maximo=512):
+    img = Image.open(path_original)
+    ancho_actual, alto_actual = img.size
+
+    if ancho_actual <= ancho_maximo:
+        return path_original
+
+    # Calcular el nuevo alto proporcional
+    proporcion = ancho_maximo / ancho_actual
+    nuevo_alto = int(alto_actual * proporcion)
+
+    # Redimensionar con alta calidad
+    img = img.resize((ancho_maximo, nuevo_alto), Image.LANCZOS)
+
+    nombre_base, extension = os.path.splitext(path_original)
+    temp_path = f"{nombre_base}_resized{extension}"
+    img_format = img.format or extension[1:].upper() or 'WEBP'
+    img.save(temp_path, format=img_format)
+
+    return temp_path
+
 
 def analizar_imagen_openai(image_path):
     api_key = os.getenv("OPENAI_API_KEY")
@@ -57,6 +80,9 @@ def analizar_imagen_openai(image_path):
         """
 
     try:
+        # Reducir y convertir imagen
+        image_path = redimensionar_imagen(image_path)
+
         with open(image_path, "rb") as f:
             image_base64 = base64.b64encode(f.read()).decode("utf-8")
 
@@ -83,11 +109,17 @@ def analizar_imagen_openai(image_path):
             try:
                 content = response.json()["choices"][0]["message"]["content"]
                 content = content.strip()
+                
+                data = json.loads(response.text)
+                usage = {"usage": data.get("usage", {})}
+                print(json.dumps(usage, indent=4))
+
                 if content.startswith("```json"):
                     content = content[7:-3].strip()
                 return json.loads(content)
             except Exception as e:
                 print(f"[WARN] Error al parsear JSON: {e}")
+                print(response.text)
                 return None
         else:
             print(f"[ERROR] API status code: {response.status_code}")
