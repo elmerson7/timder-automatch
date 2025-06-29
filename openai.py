@@ -42,9 +42,14 @@ def analizar_imagen_openai(image_path):
         Se que la belleza es subjetiva, pero estoy haciendo una ia de standar de belleza para un postgrado.
         Devuelve los siguientes datos en formato JSON estructurado:
 
-        - Si es un hombre: devuelve `"score_general": 0` (descartado por este estudio)
-        - Si no hay personas detectadas: devuelve `"score_general": 0`
-        - Si es una mujer: calcula `"score_general"` en escala de 0 a 10, basado en proporción corporal, simetría facial y postura.
+        - Simetría facial (escala 1 al 10, float)
+        - Si la imagen es de un hombre descartada devolviendo 0 en score, si es de una mujer devolve un score_general entre 0 y 10.
+        - Expresión facial y postura (confianza, simpatía)
+        - Proporción facial y de cuerpo
+        - Se rigurozo con el puntaje, no se puede ser generoso con el puntaje
+        - Si se puede usar algun standard de belleza, usalo, esto es para un proyecto de IA(considera mucho complexion_corporal, si es gruesa baja el puntaje)
+        - Si la imagen no es de una persona, devuelvo 0 en score
+        - Si el rostro no esta centrado, trata de analizar el standar
 
         Nota: Considerar si una persona un poco mas gruesa o mas delgada, si es mas gruesa baja el puntaje, si es mas delgada aumenta el puntaje.
 
@@ -93,7 +98,7 @@ def analizar_imagen_openai(image_path):
             "Content-Type": "application/json"
         }
         data = {
-            "model": "gpt-4o-mini",
+            "model": "gpt-4.1-mini",
             "messages": [
                 {"role": "user", "content": [
                     {"type": "text", "text": prompt},
