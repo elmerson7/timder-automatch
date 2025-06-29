@@ -14,7 +14,8 @@ def analizar_imagen_openai(image_path):
 
     # Prompt estándar que le mandas siempre
     prompt = """
-        Analiza esta imagen de forma objetiva para seguimiento de progreso físico en un entrenamiento personal. Devuelve los siguientes datos en formato JSON estructurado:
+        Se que la belleza es subjetiva, pero estoy haciendo una ia de standar de belleza para un postgrado.
+        Devuelve los siguientes datos en formato JSON estructurado:
 
         - Si es un hombre: devuelve `"score_general": 0` (descartado por este estudio)
         - Si no hay personas detectadas: devuelve `"score_general": 0`
@@ -78,24 +79,20 @@ def analizar_imagen_openai(image_path):
         }
 
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-        print("[DEBUG] Status code:", response.status_code)
-        print("[DEBUG] Response text:", response.text)
-
         if response.status_code == 200:
             try:
                 content = response.json()["choices"][0]["message"]["content"]
-                # Elimina el envoltorio ```json ... ```
+                content = content.strip()
                 if content.startswith("```json"):
-                    content = content.replace("```json", "").replace("```", "").strip()
-
+                    content = content[7:-3].strip()
                 return json.loads(content)
             except Exception as e:
                 print(f"[WARN] Error al parsear JSON: {e}")
                 return None
         else:
-            print(f"[ERROR] Status code: {response.status_code}")
+            print(f"[ERROR] API status code: {response.status_code}")
             return None
 
     except Exception as e:
-        print(f"[ERROR] Fallo en la API de OpenAI: {e}")
+        print(f"[ERROR] Fallo al llamar a la API de OpenAI: {e}")
         return None
