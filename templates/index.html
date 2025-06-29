@@ -6,10 +6,38 @@
 <body>
     <h1>Swipes</h1>
     <table border="1">
-        <tr><th>ID</th><th>Timestamp</th><th>Tipo</th><th>Descripción</th></tr>
+        <tr><th>ID</th><th>Tipo / Fecha</th><th>Descripción</th><th>Imágenes</th><th>Análisis JSON</th></tr>
         {% for row in swipes %}
         <tr>
-            <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td>{{ row[3] }}</td>
+            <td>{{ row[0] }}</td>
+            <td>
+                {{ row[2] }}<br>
+                {% set fecha = row[1] %}
+                {% if fecha %}
+                    {% set partes = fecha.split(' ') %}
+                    {% set fecha_ = partes[0].split('-') %}
+                    {% set hora_ = partes[1].split(':') if partes|length > 1 else ['00','00','00'] %}
+                    {{ fecha_[2] }}-{{ fecha_[1] }}-{{ fecha_[0] }} {{ hora_[0] }}:{{ hora_[1] }}:{{ hora_[2] }}
+                {% endif %}
+            </td>
+            <td style="max-width:500px; overflow-x:auto;">{{ row[3].replace('|', '<br>') | safe }}</td>
+            <td>
+                {% if row[4] %}
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 660px;">
+                    {% for url in row[4] %}
+                        <a href="{{ url }}" target="_blank">
+                            <img src="{{ url }}" loading="lazy" width="160" height="200" style="object-fit:cover; display:block;" />
+                        </a>
+                    {% endfor %}
+                    
+                    </div>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>
+                <button onclick="navigator.clipboard.writeText(`{{ row[5]|e }}`)">Copiar JSON</button>
+            </td>
         </tr>
         {% endfor %}
     </table>
@@ -25,3 +53,15 @@
     </table>
 </body>
 </html>
+
+<script>
+// Opcional: feedback visual al copiar
+const buttons = document.querySelectorAll('button');
+buttons.forEach(btn => {
+    btn.addEventListener('click', function() {
+        const original = btn.textContent;
+        btn.textContent = '¡Copiado!';
+        setTimeout(() => btn.textContent = original, 1000);
+    });
+});
+</script>
