@@ -156,6 +156,13 @@ def obtener_urls_imagenes(driver):
 
     return list(urls)
 
+import os
+import requests
+import cv2
+from urllib.parse import urlparse
+from deepface import DeepFace
+from cv2 import IMREAD_GRAYSCALE, CV_64F, Laplacian
+
 def imagen_es_valida(url_imagen):
     resultado = {
         "url": url_imagen,
@@ -166,15 +173,23 @@ def imagen_es_valida(url_imagen):
     }
 
     try:
+        # Crear carpeta img_tmp si no existe
+        os.makedirs("img_tmp", exist_ok=True)
+
+        # Obtener nombre del archivo desde la URL
+        nombre_archivo = os.path.basename(urlparse(url_imagen).path)
+        path_local = os.path.join("img_tmp", nombre_archivo)
+
+        # Descargar imagen a img_tmp/
         response = requests.get(url_imagen, timeout=10)
         if response.status_code != 200:
             resultado["razon"] = "No se pudo descargar"
             return resultado
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-            tmp.write(response.content)
-            path_local = tmp.name
+        with open(path_local, "wb") as f:
+            f.write(response.content)
 
+        # Análisis con DeepFace
         analisis = DeepFace.analyze(img_path=path_local, actions=["age"], enforce_detection=False)
         if not isinstance(analisis, list):
             analisis = [analisis]
@@ -183,12 +198,14 @@ def imagen_es_valida(url_imagen):
             resultado["razon"] = "Cero o múltiples rostros"
             return resultado
 
-        img = cv2.imread(path_local, cv2.IMREAD_GRAYSCALE)
-        blur_score = cv2.Laplacian(img, cv2.CV_64F).var()
+        # Verificar desenfoque
+        img = cv2.imread(path_local, IMREAD_GRAYSCALE)
+        blur_score = Laplacian(img, CV_64F).var()
         if blur_score < 20:
             resultado["razon"] = f"Imagen borrosa (blur={blur_score:.2f})"
             return resultado
 
+        # Análisis con OpenAI
         resultado["valida"] = True
         resultado["razon"] = "Válida"
 
@@ -209,6 +226,7 @@ def imagen_es_valida(url_imagen):
     except Exception as e:
         resultado["razon"] = f"Excepción: {e}"
         return resultado
+
 
 def hacer_swipe(driver):
     time.sleep(1)
@@ -244,7 +262,7 @@ def hacer_swipe(driver):
     promedio = score_total / score_count if score_count > 0 else 0
     print(f"[DEBUG] Promedio de score: {promedio}")
 
-    decision = 'like' if promedio >= 5 else 'nope'
+    decision = 'like' if promedio >= 7 else 'nope'
     print(f"[BOT] Decisión final por score: {decision.upper()}")
 
     wait_time = random.randint(6, 10)
