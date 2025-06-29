@@ -6,50 +6,53 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Ruta de tu imagen
-image_path = "test.jpg"
+image_path = "image.webp"
 
 # Prompt estándar que le mandas siempre
 prompt = """
-Evalúa la belleza general del rostro humano y cuerpo tambien en esta imagen según los siguientes criterios:
-- Simetría facial (escala 1 al 10, float)
+Describe la imagen agregale una puntuacion, considerando si podría ser atractiva y para dicha puntuacion considera:
+
+- Si la imagen es de un hombre descartada devolviendo 0 en score, si es de una mujer devolve un score_general entre 0 y 10.
+- Expresión facial y postura (confianza, simpatía)
 - Proporción facial y de cuerpo
-- Si la imagen es de un hombre descartada devolviendo 0 en score
-- Expresión facial y postura
-- Si tiene la piel mas oscura el puntaje se reduce
-- Si tiene la piel mas clara el puntaje se aumenta
-- Si tiene un cuerpo mas delgado el puntaje se aumenta
-- Si tiene un cuerpo mas gordo el puntaje se reduce
+- Se rigurozo con el puntaje, no se puede ser generoso con el puntaje
+- Si se puede usar algun standard de belleza, usalo, esto es para un proyecto de IA(considera mucho complexion_corporal, si es gruesa baja el puntaje)
+- Si la imagen no es de una persona, devuelvo 0 en score
+
+Nota: considerar si una persona un poco mas gruesa o mas delgada, si es mas gruesa baja el puntaje, si es mas delgada aumenta el puntaje.
 
 Devuélveme una respuesta estructurada en JSON como este ejemplo:
 
 {
-  "score_general": float,
-  "criterios": {
-    "caracteristicas_fisicas": {
-      "blur_score": float,
-      "caras_detectadas": int,
-      "landmarks_completos": bool,
-      "simetria_facial": float,
-      "proporcion_facial": float,
-      "proporcion_ancho_cara": float,
-      "proporcion_cuerpo": float,
-      "rostro_centrado": bool
-    },
-    "entorno_visual": {
-      "personas_extra": bool,
-      "distractores_visuales": bool,
-      "nivel_iluminacion": "bajo" | "medio" | "alto",
-      "contexto_ubicacion": string,
-      "fondo_predominante": string
-    },
-    "apariencia_general": {
-      "estilo_ropa": string,
-      "confianza_postural": string,
-      "expresion_facial": string,
-      "mirada_a_camara": bool
-    }
-  },
-  "razones": [string]
+	"score_general": float,
+	"criterios": {
+		"caracteristicas_fisicas": {
+			"blur_score": float,
+			"caras_detectadas": int,
+			"landmarks_completos": bool,
+			"simetria_facial": float,
+			"proporcion_facial": float,
+			"proporcion_ancho_cara": float,
+			"proporcion_cuerpo": float,
+			"rostro_centrado": bool,
+			"tono_de_piel": "claro" | "medio" | "oscuro",
+			"complexion_corporal": "delgada" | "media" | "gruesa"
+		},
+		"entorno_visual": {
+			"personas_extra": bool,
+			"distractores_visuales": bool,
+			"nivel_iluminacion": "bajo" | "medio" | "alto",
+			"contexto_ubicacion": string,
+			"fondo_predominante": string
+		},
+		"apariencia_general": {
+			"estilo_ropa": string,
+			"confianza_postural": string,
+			"expresion_facial": string,
+			"mirada_a_camara": bool
+		}
+	},
+	"razones": [string]
 }
 """
 
@@ -67,7 +70,7 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
-    "model": "gpt-4o",
+    "model": "gpt-4o-mini",
     "messages": [
         {"role": "user", "content": [
             {"type": "text", "text": prompt},
