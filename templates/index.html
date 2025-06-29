@@ -17,7 +17,8 @@
                     {% set partes = fecha.split(' ') %}
                     {% set fecha_ = partes[0].split('-') %}
                     {% set hora_ = partes[1].split(':') if partes|length > 1 else ['00','00','00'] %}
-                    {{ fecha_[2] }}-{{ fecha_[1] }}-{{ fecha_[0] }} {{ hora_[0] }}:{{ hora_[1] }}:{{ hora_[2] }}
+                    {% set segundos = hora_[2].split('.') %}
+                    {{ fecha_[2] }}-{{ fecha_[1] }}-{{ fecha_[0] }} {{ hora_[0] }}:{{ hora_[1] }}:{{ segundos[0] }}
                 {% endif %}
             </td>
             <td style="max-width:500px; overflow-x:auto;">{{ row[3].replace('|', '<br>') | safe }}</td>
