@@ -7,7 +7,7 @@ from PIL import Image
 
 load_dotenv()
 
-def redimensionar_imagen(path_original, ancho_maximo=512):
+def redimensionar_imagen(path_original, ancho_maximo=400):
     img = Image.open(path_original)
     ancho_actual, alto_actual = img.size
 
