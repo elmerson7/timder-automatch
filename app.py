@@ -4,12 +4,14 @@ import sqlite3
 import cv2
 import requests
 import tempfile
+import json
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from deepface import DeepFace
+from openai import analizar_imagen_openai
 
 EXCLUSION_KEYWORDS = [
     "trans", "transgénero", "transgénera", "persona transfemenina", "persona transmasculina",
@@ -29,7 +31,9 @@ c.execute('''
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp DATETIME,
         tipo_swipe TEXT,
-        descripcion TEXT
+        descripcion TEXT,
+        imagenes_urls TEXT,
+        analisis_json TEXT
     )
 ''')
 
@@ -46,10 +50,12 @@ c.execute("INSERT INTO logs (inicio) VALUES (?)", (datetime.now(),))
 conn.commit()
 
 
-def guardar_swipe(tipo, descripcion=None):
+def guardar_swipe(tipo, descripcion=None, urls=None, analisis=None):
     timestamp = datetime.now()
-    c.execute("INSERT INTO swipes (timestamp, tipo_swipe, descripcion) VALUES (?, ?, ?)",
-            (timestamp, tipo, descripcion))
+    urls_str = json.dumps(urls) if urls else None
+    analisis_str = json.dumps(analisis) if analisis else None
+    c.execute("INSERT INTO swipes (timestamp, tipo_swipe, descripcion, imagenes_urls, analisis_json) VALUES (?, ?, ?, ?, ?)",
+              (timestamp, tipo, descripcion, urls_str, analisis_str))
     conn.commit()
 
 
@@ -151,40 +157,58 @@ def obtener_urls_imagenes(driver):
     return list(urls)
 
 def imagen_es_valida(url_imagen):
+    resultado = {
+        "url": url_imagen,
+        "valida": False,
+        "razon": "",
+        "score": None,
+        "json": None
+    }
+
     try:
-        # Descargar imagen
         response = requests.get(url_imagen, timeout=10)
         if response.status_code != 200:
-            print("[ERROR] No se pudo descargar la imagen.")
-            return False
+            resultado["razon"] = "No se pudo descargar"
+            return resultado
 
-        # Guardar temporalmente
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
             tmp.write(response.content)
             path_local = tmp.name
 
-        # Detectar rostro
         analisis = DeepFace.analyze(img_path=path_local, actions=["age"], enforce_detection=False)
         if not isinstance(analisis, list):
             analisis = [analisis]
 
         if len(analisis) != 1:
-            print("[DESCARTADA] Cero o múltiples rostros.")
-            return False
+            resultado["razon"] = "Cero o múltiples rostros"
+            return resultado
 
-        # Verificar blur
         img = cv2.imread(path_local, cv2.IMREAD_GRAYSCALE)
         blur_score = cv2.Laplacian(img, cv2.CV_64F).var()
         if blur_score < 20:
-            print(f"[DESCARTADA] Imagen borrosa (blur={blur_score:.2f})")
-            return False
+            resultado["razon"] = f"Imagen borrosa (blur={blur_score:.2f})"
+            return resultado
 
-        print("[OK] Imagen válida")
-        return True
+        resultado["valida"] = True
+        resultado["razon"] = "Válida"
+
+        json_result = analizar_imagen_openai(path_local)
+        if json_result and isinstance(json_result, dict):
+            score = json_result.get("score_general", 0)
+            if score > 0:
+                resultado["score"] = score
+                resultado["json"] = json_result
+            else:
+                resultado["razon"] = "Score 0 (descartada por OpenAI)"
+                resultado["valida"] = False
+        else:
+            resultado["razon"] = "OpenAI no devolvió JSON"
+
+        return resultado
 
     except Exception as e:
-        print(f"[ERROR] {e}")
-        return False
+        resultado["razon"] = f"Excepción: {e}"
+        return resultado
 
 def hacer_swipe(driver):
     time.sleep(1)
@@ -196,42 +220,42 @@ def hacer_swipe(driver):
 
     if descripcion_contiene_palabra_excluida(driver):
         print("[BOT] Decisión: LEFT (palabra excluida en descripción)")
-        swipe = 'nope'
-    else:
-        print("[BOT] Decisión: RIGHT (perfil aceptado)")
-        swipe = 'like'
+        urls_crudas = obtener_urls_imagenes(driver)
+        resultados = [imagen_es_valida(url) for url in urls_crudas]
+        guardar_swipe('nope', descripcion, urls=urls_crudas, analisis=resultados)
+        left_button, _ = obtener_botones_swipe(driver)
+        if left_button:
+            left_button.click()
+        return
 
-    # Obtener imágenes del perfil ANTES de esperar
     urls_crudas = obtener_urls_imagenes(driver)
-    # print(f"[DEBUG] URLs obtenidas del perfil: {urls_crudas}")
+    resultados_validos = []
+    score_total = 0
+    score_count = 0
 
-    urls_validas = []
     for url in urls_crudas:
-        print(f"\n[VERIFICANDO] {url}")
-        if imagen_es_valida(url):
-            print(f"[✅ VÁLIDA] Imagen aceptada: {url}")
-            urls_validas.append(url)
-        else:
-            print(f"[❌ DESCARTADA] Imagen rechazada: {url}")
+        print(f"[VERIFICANDO] {url}")
+        resultado = imagen_es_valida(url)
+        if resultado["valida"] and resultado["score"] is not None:
+            score_total += resultado["score"]
+            score_count += 1
+        resultados_validos.append(resultado)
 
-    # Espera personalizada
+    promedio = score_total / score_count if score_count > 0 else 0
+    print(f"[DEBUG] Promedio de score: {promedio}")
+
+    decision = 'like' if promedio >= 5 else 'nope'
+    print(f"[BOT] Decisión final por score: {decision.upper()}")
+
     wait_time = random.randint(6, 10)
     print(f"[DEBUG] Esperando {wait_time}s antes de hacer swipe...")
     time.sleep(wait_time)
 
-    # Ejecutar swipe y guardar
-    if swipe == 'nope':
-        time.sleep(6)
-    else:
-        time.sleep(7)
-
-    # Ejecutar swipe y guardar
-    if swipe == 'nope':
+    if decision == 'nope':
         left_button, _ = obtener_botones_swipe(driver)
         if left_button:
             left_button.click()
             print("[BOT] Swipe LEFT ejecutado")
-            guardar_swipe('nope', descripcion)
         else:
             print("[ERROR] No se encontró el botón de left swipe")
     else:
@@ -239,9 +263,10 @@ def hacer_swipe(driver):
         if right_button:
             right_button.click()
             print("[BOT] Swipe RIGHT ejecutado")
-            guardar_swipe('like', descripcion)
         else:
             print("[ERROR] No se encontró el botón de right swipe")
+
+    guardar_swipe(decision, descripcion, urls=urls_crudas, analisis=resultados_validos)
 
 def main():
     driver = iniciar_driver()
