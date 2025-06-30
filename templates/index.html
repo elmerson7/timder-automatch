@@ -2,71 +2,405 @@
 <html>
 <head>
     <title>Tablas desde SQLite</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .main-header {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24, #ff9ff3, #54a0ff);
+            background-size: 400% 400%;
+            animation: gradientShift 4s ease infinite;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .card {
+            border: none;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+        }
+        
+        .card-header {
+            border-radius: 20px 20px 0 0 !important;
+            padding: 20px 25px;
+            font-weight: bold;
+        }
+        
+        .swipes-header {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+        
+        .logs-header {
+            background: linear-gradient(45deg, #26de81, #20bf6b);
+        }
+        
+        .img-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 100%;
+        }
+        
+        .img-grid .img-item {
+            flex: 0 0 calc(25% - 10px);
+            max-width: 110px;
+        }
+        
+        .img-grid .img-item:nth-child(4n+1) {
+            clear: left;
+        }
+        
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .table {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 0;
+            width: 100%;
+            min-width: 1200px;
+        }
+        
+        .table thead th {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .table tbody tr {
+            border-bottom: 2px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .table tbody tr:hover {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .table tbody td {
+            padding: 20px 15px;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+            min-width: 150px;
+        }
+        
+        .table tbody td:nth-child(3) {
+            min-width: 300px;
+            max-width: 350px;
+        }
+        
+        .table tbody td:nth-child(4) {
+            min-width: 450px;
+            max-width: 500px;
+        }
+        
+        .badge-like {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .badge-nope {
+            background: linear-gradient(45deg, #e17055, #d63031);
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .btn-copy {
+            background: linear-gradient(45deg, #a29bfe, #6c5ce7);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+        }
+        
+        .btn-copy:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.6);
+        }
+        
+        .img-thumbnail {
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .img-thumbnail:hover {
+            border-color: #74b9ff;
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .stats-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-width: 50px;
+            display: inline-block;
+        }
+        
+        .stats-likes {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+        }
+        
+        .stats-nopes {
+            background: linear-gradient(45deg, #e17055, #d63031);
+        }
+        
+        .stats-total {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+        
+        @media (max-width: 768px) {
+            .table-container {
+                border-radius: 15px;
+            }
+            
+            .main-header {
+                padding: 20px;
+                text-align: center;
+            }
+            
+            .main-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card-header h2 {
+                font-size: 1.3rem;
+            }
+            
+            .table tbody td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+                min-width: 120px;
+            }
+            
+            .img-grid .img-item {
+                flex: 0 0 calc(50% - 10px);
+                max-width: 80px;
+            }
+            
+            .img-grid .img-item:nth-child(2n+1) {
+                clear: left;
+            }
+            
+            .img-grid .img-item:nth-child(4n+1) {
+                clear: none;
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-    <h1>Swipes</h1>
-    <table border="1">
-        <tr><th>ID</th><th>Tipo / Fecha</th><th>Descripción</th><th>Imágenes</th><th>Análisis JSON</th></tr>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="main-header text-center text-white">
+            <h1 class="mb-2">
+                <i class="bi bi-heart-fill text-danger pulse"></i> 
+                Panel de Control Tinder
+            </h1>
+            <p class="mb-0 fs-5">✨ Análisis de swipes y estadísticas ✨</p>
+        </div>
+
+        <!-- Swipes Section -->
+        <div class="card shadow-lg mb-5">
+            <div class="card-header swipes-header text-white">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-swipe"></i> 💕 Historial de Swipes
+                </h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-center">🆔 ID</th>
+                                <th scope="col">📅 Tipo / Fecha</th>
+                                <th scope="col">📝 Descripción</th>
+                                <th scope="col" class="text-center">🖼️ Imágenes</th>
+                                <th scope="col" class="text-center">📊 Análisis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
         {% for row in swipes %}
         <tr>
-            <td>{{ row[0] }}</td>
-            <td>
-                {{ row[2] }}<br>
+                                <td class="text-center fw-bold fs-5">{{ row[0] }}</td>
+                                <td>
+                                    {% if row[2] == 'like' %}
+                                        <span class="badge badge-like">
+                                            <i class="bi bi-heart-fill"></i> LIKE 💚
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-nope">
+                                            <i class="bi bi-x-circle-fill"></i> NOPE ❌
+                                        </span>
+                                    {% endif %}
+                                    <br><br>
                 {% set fecha = row[1] %}
                 {% if fecha %}
                     {% set partes = fecha.split(' ') %}
                     {% set fecha_ = partes[0].split('-') %}
                     {% set hora_ = partes[1].split(':') if partes|length > 1 else ['00','00','00'] %}
                     {% set segundos = hora_[2].split('.') %}
-                    {{ fecha_[2] }}-{{ fecha_[1] }}-{{ fecha_[0] }} {{ hora_[0] }}:{{ hora_[1] }}:{{ segundos[0] }}
+                                        <small class="text-muted fw-bold">
+                                            <i class="bi bi-calendar3 text-primary"></i> 
+                                            {{ fecha_[2] }}-{{ fecha_[1] }}-{{ fecha_[0] }} 
+                                            <br>
+                                            <i class="bi bi-clock text-success"></i>
+                                            {{ hora_[0] }}:{{ hora_[1] }}:{{ segundos[0] }}
+                                        </small>
                 {% endif %}
             </td>
-            <td style="max-width:500px; overflow-x:auto;">{{ row[3].replace('|', '<br>') | safe }}</td>
-            <td>
+                                <td style="max-width:350px;">
+                                    <div class="text-wrap fw-bold">
+                                        {{ row[3].replace('|', '<br>🔸 ') | safe }}
+                                    </div>
+                                </td>
+                                <td class="text-center">
                 {% if row[4] %}
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 660px;">
+                                        <div class="img-grid">
                     {% for url in row[4] %}
-                        <a href="{{ url }}" target="_blank">
-                            <img src="{{ url }}" loading="lazy" width="160" height="200" style="object-fit:cover; display:block;" />
-                        </a>
+                                            <div class="img-item">
+                                                <a href="{{ url }}" target="_blank" class="text-decoration-none">
+                                                    <img src="{{ url }}" loading="lazy" 
+                                                         class="img-thumbnail" 
+                                                         width="110" height="140" 
+                                                         style="object-fit:cover;" />
+                                                </a>
+                                            </div>
                     {% endfor %}
-                    
                     </div>
                 {% else %}
-                    -
+                                        <span class="text-muted fs-5">
+                                            <i class="bi bi-image"></i> Sin imágenes 📷
+                                        </span>
                 {% endif %}
             </td>
-            <td>
-                <button onclick="navigator.clipboard.writeText(`{{ row[5]|e }}`)">Copiar JSON</button>
+                                <td class="text-center">
+                                    <button class="btn btn-copy" 
+                                            onclick="navigator.clipboard.writeText(`{{ row[5]|e }}`)">
+                                        <i class="bi bi-clipboard"></i> Copiar JSON 📋
+                                    </button>
             </td>
         </tr>
         {% endfor %}
+                        </tbody>
     </table>
+                </div>
+            </div>
+        </div>
 
-    <h1>Logs</h1>
-    <table border="1">
-        <tr><th>ID</th><th>Inicio</th><th>Likes</th><th>Nopes</th><th>Total</th></tr>
+        <!-- Logs Section -->
+        <div class="card shadow-lg">
+            <div class="card-header logs-header text-white">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> 📈 Estadísticas de Sesiones
+                </h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-center">🆔 ID</th>
+                                <th scope="col">🕐 Inicio de Sesión</th>
+                                <th scope="col" class="text-center">
+                                    💚 Likes
+                                </th>
+                                <th scope="col" class="text-center">
+                                    ❌ Nopes
+                                </th>
+                                <th scope="col" class="text-center">
+                                    🔢 Total
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
         {% for log in logs_info %}
         <tr>
-            <td>{{ log.id }}</td>
-            <td>{{ log.inicio }}</td>
-            <td>{{ log.n_like }}</td>
-            <td>{{ log.n_nope }}</td>
-            <td>{{ log.total }}</td>
+                                <td class="text-center fw-bold fs-5">{{ log.id }}</td>
+                                <td class="fw-bold">
+                                    <i class="bi bi-calendar3 text-primary"></i> 
+                                    {{ log.inicio }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="stats-badge stats-likes text-white">{{ log.n_like }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="stats-badge stats-nopes text-white">{{ log.n_nope }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="stats-badge stats-total text-white">{{ log.total }}</span>
+                                </td>
         </tr>
         {% endfor %}
+                        </tbody>
     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/js/bootstrap.min.js"></script>
+
+    <script>
+    // Feedback visual mejorado al copiar
+    const buttons = document.querySelectorAll('.btn-copy');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> ¡Copiado! ✅';
+            btn.style.background = 'linear-gradient(45deg, #00b894, #00cec9)';
+            
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.style.background = 'linear-gradient(45deg, #a29bfe, #6c5ce7)';
+            }, 2000);
+        });
+    });
+    </script>
 </body>
 </html>
-
-<script>
-// Opcional: feedback visual al copiar
-const buttons = document.querySelectorAll('button');
-buttons.forEach(btn => {
-    btn.addEventListener('click', function() {
-        const original = btn.textContent;
-        btn.textContent = '¡Copiado!';
-        setTimeout(() => btn.textContent = original, 1000);
-    });
-});
-</script>
