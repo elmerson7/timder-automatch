@@ -123,6 +123,8 @@ def analizar_imagen_openai(image_path):
 
                 if content.startswith("```json"):
                     content = content[7:-3].strip()
+
+                    print(json.loads(content))
                 return json.loads(content)
             except Exception as e:
                 print(f"[WARN] Error al parsear JSON: {e}")
