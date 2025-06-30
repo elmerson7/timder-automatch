@@ -45,10 +45,14 @@
 
     <h1>Logs</h1>
     <table border="1">
-        <tr><th>ID</th><th>Inicio</th></tr>
-        {% for row in logs %}
+        <tr><th>ID</th><th>Inicio</th><th>Likes</th><th>Nopes</th><th>Total</th></tr>
+        {% for log in logs_info %}
         <tr>
-            <td>{{ row[0] }}</td><td>{{ row[1] }}</td>
+            <td>{{ log.id }}</td>
+            <td>{{ log.inicio }}</td>
+            <td>{{ log.n_like }}</td>
+            <td>{{ log.n_nope }}</td>
+            <td>{{ log.total }}</td>
         </tr>
         {% endfor %}
     </table>
